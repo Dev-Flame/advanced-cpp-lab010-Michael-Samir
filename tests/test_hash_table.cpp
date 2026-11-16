@@ -117,3 +117,36 @@ TEST_CASE("HashTable handles many strings and negative values") {
     REQUIRE(table.get("big") == 123456);
     REQUIRE(table.get("another") == -999);
 }
+
+TEST_CASE("HashTable finds colliding keys past deleted slots") {
+    HashTable table(11);
+    // These keys share a starting bucket at capacity 11.
+    REQUIRE(table.insert("key14", 1));
+    REQUIRE(table.insert("key19", 2));
+    REQUIRE(table.insert("key89", 3));
+    REQUIRE(table.remove("key14"));
+    REQUIRE_THROWS_AS(table.get("key14"), std::out_of_range);
+    REQUIRE_FALSE(table.insert("key89", 99));
+    REQUIRE(table.update("key19", -2));
+    REQUIRE(table.insert("key114", 4));
+    REQUIRE(table.capacity() == 11);
+    REQUIRE(table.size() == 3);
+    REQUIRE(table.get("key19") == -2);
+    REQUIRE(table.get("key89") == 3);
+    REQUIRE(table.get("key114") == 4);
+}
+
+TEST_CASE("HashTable grows when a composite capacity exhausts a probe sequence") {
+    HashTable table(8);
+    REQUIRE(table.capacity() == 8);
+    REQUIRE(table.insert("slot1", 1));
+    REQUIRE(table.insert("slot9", 2));
+    REQUIRE(table.insert("slot10", 3));
+    REQUIRE_FALSE(table.contains("slot18"));
+    REQUIRE(table.insert("slot18", 4));
+    REQUIRE(table.capacity() > 8);
+    REQUIRE(table.get("slot1") == 1);
+    REQUIRE(table.get("slot9") == 2);
+    REQUIRE(table.get("slot10") == 3);
+    REQUIRE(table.get("slot18") == 4);
+}
